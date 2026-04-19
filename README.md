@@ -1,58 +1,60 @@
 # openai-fc-proxy
 
-Transparent HTTP proxy that adds OpenAI-compatible function calling (tool use) to any LLM backend that doesn't natively support the `tools` parameter.
+[English](./README_EN.md)
 
-## How it works
+透明 HTTP 代理，为不原生支持 `tools` 参数的 LLM 后端添加 OpenAI 兼容的函数调用（tool use）能力。
+
+## 工作原理
 
 ```
-Client (with tools) ──► fc-proxy ──► LLM backend (without tools)
-                         │
-                    1. Converts tools → system prompt
-                    2. Strips tools from request
-                    3. Parses tool calls from response text
-                    4. Returns standard OpenAI tool_calls format
+客户端 (带 tools) ──► fc-proxy ──► LLM 后端 (不支持 tools)
+                        │
+                   1. tools 定义 → 系统提示词
+                   2. 从上游请求中移除 tools
+                   3. 从模型回复文本中解析工具调用
+                   4. 返回标准 OpenAI tool_calls 格式
 ```
 
-When a request includes `tools`, the proxy:
+当请求包含 `tools` 时，代理会：
 
-1. Converts tool definitions into a system prompt instructing the model to output `##TOOL_CALL##...##END_CALL##` blocks
-2. Removes `tools` and `tool_choice` from the upstream request
-3. Parses the model's text output for tool call patterns
-4. Returns a standard OpenAI `tool_calls` response
+1. 将工具定义转换为系统提示词，指示模型输出 `##TOOL_CALL##...##END_CALL##` 格式
+2. 从转发给上游的请求中移除 `tools` 和 `tool_choice`
+3. 解析模型回复中的工具调用模式
+4. 返回标准 OpenAI `tool_calls` 响应
 
-When no `tools` are present, requests pass through with zero overhead.
+当请求不包含 `tools` 时，请求直接透传，零开销。
 
-## Supported tool call formats
+## 支持的工具调用格式
 
-The parser handles multiple formats models might produce:
+解析器能处理模型可能输出的多种格式：
 
-| Format | Example |
-|--------|---------|
-| Delimited | `##TOOL_CALL##{"name":"fn","arguments":{...}}##END_CALL##` |
+| 格式 | 示例 |
+|------|------|
+| 分隔符 | `##TOOL_CALL##{"name":"fn","arguments":{...}}##END_CALL##` |
 | XML tool_call | `<tool_call>{"name":"fn","arguments":{...}}</tool_call>` |
 | XML function_call | `<function_call>{"name":"fn","arguments":{...}}</function_call>` |
-| Raw JSON | `{"name":"fn","arguments":{...}}` |
-| Code block | `` ```json\n{"name":"fn","arguments":{...}}\n``` `` |
+| 裸 JSON | `{"name":"fn","arguments":{...}}` |
+| 代码块 | `` ```json\n{"name":"fn","arguments":{...}}\n``` `` |
 
-## Quick start
+## 快速开始
 
 ```bash
-# Point at any OpenAI-compatible backend
+# 指向任意 OpenAI 兼容后端
 UPSTREAM_URL=http://localhost:11434 PORT=3003 node index.js
 
-# Or with Docker
+# 或使用 Docker
 docker run -e UPSTREAM_URL=http://host.docker.internal:11434 -p 3003:3003 ghcr.io/physics-dimension/openai-fc-proxy
 ```
 
-Then use `http://localhost:3003` as your API base URL. Clients can send `tools` as usual.
+然后将 `http://localhost:3003` 作为 API Base URL，客户端照常发送 `tools` 即可。
 
-## Environment variables
+## 环境变量
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `UPSTREAM_URL` | `http://localhost:11434` | Backend API URL |
-| `PORT` | `3003` | Proxy listen port |
-| `BIND` | `0.0.0.0` | Bind address |
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `UPSTREAM_URL` | `http://localhost:11434` | 上游 API 地址 |
+| `PORT` | `3003` | 代理监听端口 |
+| `BIND` | `0.0.0.0` | 绑定地址 |
 
 ## Docker Compose
 
@@ -68,31 +70,31 @@ services:
       - "host.docker.internal:host-gateway"
 ```
 
-## Streaming
+## 流式响应
 
-Streaming is fully supported via the `ToolSieve` approach:
+通过 `ToolSieve` 机制完整支持流式响应：
 
-- Normal text chunks pass through immediately (no buffering delay)
-- When a tool call marker is detected mid-stream, the proxy buffers until the block is complete
-- Tool calls are emitted as standard SSE `tool_calls` delta events
+- 普通文本 chunk 即时透传（零缓冲延迟）
+- 检测到工具调用标记时才开始缓冲，直到块完整
+- 工具调用以标准 SSE `tool_calls` delta 事件输出
 
-## Testing
+## 测试
 
 ```bash
 node test.js
 ```
 
-Runs 8 tests against a local mock server covering passthrough, tool call parsing (multiple formats), streaming, multi-tool, and error stripping.
+运行 8 项测试：透传、工具调用解析（多种格式）、流式传输、多工具调用、错误过滤。
 
-## Use cases
+## 适用场景
 
-- **Qwen2API** / chat.qwen.ai reverse proxies
-- **Ollama** models without native tool support
-- Any OpenAI-compatible API that ignores the `tools` parameter
+- **Qwen2API** / chat.qwen.ai 逆向代理
+- **Ollama** 不支持原生工具调用的模型
+- 任何忽略 `tools` 参数的 OpenAI 兼容 API
 
-## Zero dependencies
+## 零依赖
 
-Pure Node.js (>=18), no npm packages required.
+纯 Node.js (>=18)，无需安装任何 npm 包。
 
 ## License
 
