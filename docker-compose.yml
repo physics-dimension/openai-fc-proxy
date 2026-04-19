@@ -1,0 +1,11 @@
+services:
+  fc-proxy:
+    build: .
+    ports:
+      - "3003:3003"
+    environment:
+      - PORT=3003
+      - UPSTREAM_URL=http://host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped

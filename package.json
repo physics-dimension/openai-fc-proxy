@@ -1,0 +1,24 @@
+{
+  "name": "openai-fc-proxy",
+  "version": "1.0.0",
+  "description": "Transparent OpenAI function-calling proxy for LLM backends that don't natively support tools",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node test.js"
+  },
+  "keywords": [
+    "openai",
+    "function-calling",
+    "tool-calling",
+    "proxy",
+    "llm",
+    "qwen",
+    "ollama"
+  ],
+  "author": "physics-dimension",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
