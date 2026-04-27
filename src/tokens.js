@@ -8,8 +8,16 @@
 
 function estimateTokens(text) {
   if (!text) return 0;
-  // Count CJK characters
-  const cjk = (text.match(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/g) || []).length;
+  // Count CJK characters without creating a large match array
+  let cjk = 0;
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    if ((code >= 0x4e00 && code <= 0x9fff) ||
+        (code >= 0x3400 && code <= 0x4dbf) ||
+        (code >= 0xf900 && code <= 0xfaff)) {
+      cjk++;
+    }
+  }
   const rest = text.length - cjk;
   return Math.ceil(cjk / 1.5 + rest / 4);
 }

@@ -27,7 +27,11 @@ function pick(arr) {
 function generateMarkers() {
   const set = pick(DELIMITER_SETS);
   const suffix1 = pick(SUFFIX_POOL);
-  const suffix2 = pick(SUFFIX_POOL);
+  // Ensure suffix2 differs from suffix1
+  let suffix2 = pick(SUFFIX_POOL);
+  while (suffix2 === suffix1 && SUFFIX_POOL.length > 1) {
+    suffix2 = pick(SUFFIX_POOL);
+  }
   const { open, close, mid } = set;
 
   return {

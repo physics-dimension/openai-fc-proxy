@@ -157,18 +157,18 @@ function parseRawJson(text, allowed) {
 }
 
 // --- Broad error stripping ---
-const ERROR_PATTERNS = [
-  /Tool\s+[A-Za-z0-9_.:-]*\s*does not exists?\.?\s*/gi,
-  /Error:\s*tool\s+['"][^'"]*['"]\s+not found[^\n]*/gi,
-  /\bToolError\b[^\n]*/gi,
-  /No such tool[^\n]*/gi,
+// Patterns defined without /g flag; used with replaceAll or per-call RegExp
+const ERROR_PATTERN_SOURCES = [
+  /Tool\s+[A-Za-z0-9_.:-]*\s*does not exists?\.?\s*/i,
+  /Error:\s*tool\s+['"][^'"]*['"]\s+not found[^\n]*/i,
+  /\bToolError\b[^\n]*/i,
+  /No such tool[^\n]*/i,
 ];
 
 function stripToolErrors(text) {
   let result = text;
-  for (const re of ERROR_PATTERNS) {
-    re.lastIndex = 0;
-    result = result.replace(re, '');
+  for (const re of ERROR_PATTERN_SOURCES) {
+    result = result.replace(new RegExp(re.source, 'gi'), '');
   }
   return result.trim();
 }

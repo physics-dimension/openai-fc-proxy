@@ -119,4 +119,14 @@ function resolveUpstream(model, originalHeaders) {
   };
 }
 
-module.exports = { resolveUpstream };
+/**
+ * Get the default upstream base URL (for non-chat requests like /v1/models).
+ * Uses the default routing service if configured, otherwise UPSTREAM_URL.
+ */
+function getDefaultUpstreamUrl() {
+  buildModelMap();
+  if (defaultService) return defaultService.base_url;
+  return UPSTREAM_URL;
+}
+
+module.exports = { resolveUpstream, getDefaultUpstreamUrl };

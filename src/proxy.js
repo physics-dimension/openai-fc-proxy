@@ -7,7 +7,7 @@ const { parseToolCallsFromText, stripToolErrors } = require('./parser');
 const { transformMessages, hasToolHistory } = require('./messages');
 const { ToolSieve } = require('./sieve');
 const { parseWithRetry, fetchWithRetry } = require('./retry');
-const { resolveUpstream } = require('./router');
+const { resolveUpstream, getDefaultUpstreamUrl } = require('./router');
 const { authenticate } = require('./auth');
 const { estimateMessageTokens, ensureUsage } = require('./tokens');
 const { cleanHeaders } = require('./headers');
@@ -71,12 +71,13 @@ async function handleRequest(req, res) {
     }
 
     // Only intercept POST /v1/chat/completions
+    const defaultUp = getDefaultUpstreamUrl();
     if (!(req.url.includes('/v1/chat/completions') && req.method === 'POST')) {
-      return pipeThrough(req, rawBody, res, UPSTREAM_URL);
+      return pipeThrough(req, rawBody, res, defaultUp);
     }
 
     let data;
-    try { data = JSON.parse(rawBody); } catch { return pipeThrough(req, rawBody, res, UPSTREAM_URL); }
+    try { data = JSON.parse(rawBody); } catch { return pipeThrough(req, rawBody, res, defaultUp); }
 
     const requestHasTools = Array.isArray(data.tools) && data.tools.length > 0;
     const requestHasToolHistory = hasToolHistory(data.messages);

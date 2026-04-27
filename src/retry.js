@@ -53,6 +53,16 @@ function buildRetryPrompt(type, content, error) {
 }
 
 /**
+ * Trim messages to avoid token explosion during retries.
+ * Keeps system message(s) + last N user/assistant turns.
+ */
+function trimMessagesForRetry(msgs, maxTurns = 6) {
+  const system = msgs.filter(m => m.role === 'system');
+  const rest = msgs.filter(m => m.role !== 'system');
+  return [...system, ...rest.slice(-maxTurns)];
+}
+
+/**
  * Attempt to parse tool calls with retry.
  * Non-streaming only. Calls upstream again if parsing fails.
  *
@@ -88,11 +98,11 @@ async function parseWithRetry(content, allowedNames, toolDefs, messages, callUps
 
       const prompt = buildRetryPrompt('syntax_error', currentContent, validationError);
       try {
-        currentMessages = [
+        currentMessages = trimMessagesForRetry([
           ...currentMessages,
           { role: 'assistant', content: currentContent },
           { role: 'user', content: prompt },
-        ];
+        ]);
         const result = await callUpstream(currentMessages);
         currentContent = result.content;
         console.log(`[fc-proxy] Retry #${attempt + 1}: schema validation error, got ${currentContent.length} chars`);
@@ -111,11 +121,11 @@ async function parseWithRetry(content, allowedNames, toolDefs, messages, callUps
 
     const prompt = buildRetryPrompt(failType, currentContent, null);
     try {
-      currentMessages = [
+      currentMessages = trimMessagesForRetry([
         ...currentMessages,
         { role: 'assistant', content: currentContent },
         { role: 'user', content: prompt },
-      ];
+      ]);
       const result = await callUpstream(currentMessages);
       currentContent = result.content;
       console.log(`[fc-proxy] Retry #${attempt + 1}: ${failType}, got ${currentContent.length} chars`);
