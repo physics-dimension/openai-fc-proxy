@@ -38,7 +38,8 @@ async function pipeThrough(req, body, res, upstreamBaseUrl) {
     headers['content-length'] = Buffer.byteLength(body).toString();
   }
   try {
-    const resp = await fetchWithRetry(upstreamBaseUrl + req.url, opts);
+    const base = upstreamBaseUrl.replace(/\/+$/, '');
+    const resp = await fetchWithRetry(base + req.url, opts);
     const rh = {};
     resp.headers.forEach((v, k) => { if (k !== 'transfer-encoding') rh[k] = v; });
     res.writeHead(resp.status, rh);
@@ -91,7 +92,7 @@ async function handleRequest(req, res) {
     );
 
     const allowedNames = requestHasTools
-      ? new Set(data.tools.map(t => (t.function || t).name))
+      ? new Set(data.tools.map(t => (t.function || t).name).filter(Boolean))
       : new Set();
 
     const toolsPrompt = requestHasTools ? toolsToPrompt(data.tools, data.tool_choice) : '';
@@ -109,7 +110,8 @@ async function handleRequest(req, res) {
     const bodyStr = JSON.stringify(upBody);
     upHeaders['content-length'] = Buffer.byteLength(bodyStr).toString();
 
-    const requestUrl = `${upstreamUrl}${upstreamUrl.endsWith('/') ? '' : '/'}chat/completions`;
+    const baseUrl = upstreamUrl.replace(/\/+$/, '');
+    const requestUrl = baseUrl.includes('/chat/completions') ? baseUrl : `${baseUrl}/chat/completions`;
 
     try {
       const resp = await fetchWithRetry(requestUrl, {
@@ -142,7 +144,16 @@ async function handleRequest(req, res) {
 // ============================================================
 async function handleNonStream(resp, res, data, allowedNames, messages, upHeaders, requestUrl, actualModel, promptTokens) {
   const result = await resp.json();
-  const content = result.choices?.[0]?.message?.content || '';
+
+  // Guard against empty/malformed choices
+  if (!result.choices || !result.choices[0] || !result.choices[0].message) {
+    ensureUsage(result, promptTokens, '');
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify(result));
+    return;
+  }
+
+  const content = result.choices[0].message.content || '';
 
   if (!allowedNames.size) {
     // No tools in request, just clean up any stale tool error text

@@ -20,7 +20,7 @@ function typeOk(v, t) {
   if (t === 'boolean') return typeof v === 'boolean';
   if (t === 'integer') return typeof v === 'number' && Number.isInteger(v);
   if (t === 'number') return typeof v === 'number';
-  if (t === 'null') return v === null || v === undefined;
+  if (t === 'null') return v === null;
   return true;
 }
 

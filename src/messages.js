@@ -17,8 +17,9 @@ function mergeAdjacentMessages(messages) {
 
   for (let i = 1; i < messages.length; i++) {
     const msg = messages[i];
-    if (msg.role === current.role) {
-      current.content = `${current.content || ''}\n\n${msg.content || ''}`;
+    if (msg.role === current.role && typeof current.content === 'string' && typeof msg.content === 'string') {
+      // Only merge string content; skip merging array (multimodal) content
+      current.content = `${current.content}\n\n${msg.content}`;
     } else {
       merged.push(current);
       current = { ...msg };
@@ -111,8 +112,8 @@ function transformMessages(messages, toolsPrompt, { hasTools }) {
       continue;
     }
 
-    // passthrough
-    out.push({ role: msg.role, content: msg.content });
+    // passthrough (preserve all original fields)
+    out.push({ ...msg });
   }
 
   if (hasTools && !hasSystem && toolsPrompt) {

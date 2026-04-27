@@ -49,12 +49,13 @@ class ToolSieve {
     this.inToolBlock = false;
     this.currentEndMarker = null;
     this.thinkDepth = 0;
+    this._thinkScanPos = 0; // tracks how far we've scanned for think tags
   }
 
   feed(chunk) {
     this.buffer += chunk;
 
-    // Track <think> depth
+    // Track <think> depth (only scan new content)
     this._updateThinkState();
 
     if (!this.inToolBlock) {
@@ -66,7 +67,7 @@ class ToolSieve {
             this.inToolBlock = true;
             this.currentEndMarker = END_MARKERS[marker] || null;
             const textBefore = this.buffer.slice(0, idx);
-            this.buffer = this.buffer.slice(idx);
+            this._sliceBuffer(idx);
             return { text: stripToolErrors(textBefore), done: false };
           }
         }
@@ -76,7 +77,7 @@ class ToolSieve {
       const safeCut = findSafeCut(this.buffer, STREAM_MARKERS);
       if (safeCut > 0) {
         const safe = this.buffer.slice(0, safeCut);
-        this.buffer = this.buffer.slice(safeCut);
+        this._sliceBuffer(safeCut);
         return { text: stripToolErrors(safe), done: false };
       }
       return { text: '', done: false };
@@ -111,29 +112,50 @@ class ToolSieve {
         // Parse all accumulated tool blocks
         const { calls } = parseToolCallsFromText(this.buffer, this.allowed);
         if (calls.length > 0) {
-          this.buffer = remaining;
+          this._setBuffer(remaining);
           this.inToolBlock = false;
           return { toolCalls: calls, done: true };
         }
       }
     } else {
-      // JSON-style marker: try to parse
+      // JSON-style marker: bail if buffer too large (prevents getting stuck on false positive)
+      if (this.buffer.length > 2000) {
+        const text = this.buffer;
+        this._setBuffer('');
+        this.inToolBlock = false;
+        return { text: stripToolErrors(text), done: false };
+      }
       try {
         JSON.parse(this.buffer.trim());
         const { calls } = parseToolCallsFromText(this.buffer, this.allowed);
-        this.buffer = '';
+        this._setBuffer('');
         this.inToolBlock = false;
         if (calls.length > 0) return { toolCalls: calls, done: true };
-      } catch { /* incomplete JSON */ }
+      } catch { /* incomplete JSON, keep buffering */ }
     }
 
     return { text: '', done: false };
+  }
+
+  /** Safely replace buffer and reset think scan position */
+  _sliceBuffer(fromIndex) {
+    this.buffer = this.buffer.slice(fromIndex);
+    this._thinkScanPos = Math.max(0, this._thinkScanPos - fromIndex);
+  }
+
+  _setBuffer(value) {
+    this.buffer = value;
+    this._thinkScanPos = 0;
+    // Re-scan think state for new buffer content
+    this.thinkDepth = 0;
+    this._updateThinkState();
   }
 
   flush() {
     if (this.buffer) {
       const { calls, cleaned } = parseToolCallsFromText(this.buffer, this.allowed);
       this.buffer = '';
+      this._thinkScanPos = 0;
       if (calls.length > 0) return { toolCalls: calls, text: cleaned };
       return { text: stripToolErrors(cleaned) };
     }
@@ -141,9 +163,9 @@ class ToolSieve {
   }
 
   _updateThinkState() {
-    // Simple scan of buffer for think tag changes
-    let i = 0;
+    // Only scan new content since last scan position
     const buf = this.buffer;
+    let i = this._thinkScanPos;
     while (i < buf.length) {
       if (buf.startsWith('<think>', i)) {
         this.thinkDepth++;
@@ -155,6 +177,7 @@ class ToolSieve {
         i++;
       }
     }
+    this._thinkScanPos = i;
   }
 }
 

@@ -54,19 +54,24 @@ function normalizeName(name, allowed) {
 }
 
 // --- Rare-char delimiter parser (primary) ---
-function parseRareCharFormat(text, allowed) {
-  const m = markers;
-  const re = new RegExp(
-    `${escapeRegex(m.TC_START)}\\s*` +
-    `${escapeRegex(m.NAME_START)}([\\s\\S]*?)${escapeRegex(m.NAME_END)}\\s*` +
-    `${escapeRegex(m.ARGS_START)}([\\s\\S]*?)${escapeRegex(m.ARGS_END)}\\s*` +
-    `${escapeRegex(m.TC_END)}`,
-    'g'
-  );
+// Cache compiled regex (markers are constant per process lifetime)
+const _rareCharParseRe = new RegExp(
+  `${escapeRegex(markers.TC_START)}\\s*` +
+  `${escapeRegex(markers.NAME_START)}([\\s\\S]*?)${escapeRegex(markers.NAME_END)}\\s*` +
+  `${escapeRegex(markers.ARGS_START)}([\\s\\S]*?)${escapeRegex(markers.ARGS_END)}\\s*` +
+  `${escapeRegex(markers.TC_END)}`,
+  'g'
+);
+const _rareCharRemoveRe = new RegExp(
+  `${escapeRegex(markers.TC_START)}[\\s\\S]*?${escapeRegex(markers.TC_END)}`,
+  'g'
+);
 
+function parseRareCharFormat(text, allowed) {
+  _rareCharParseRe.lastIndex = 0;
   const calls = [];
   let match;
-  while ((match = re.exec(text)) !== null) {
+  while ((match = _rareCharParseRe.exec(text)) !== null) {
     const name = match[1].trim();
     const argsStr = match[2].trim();
     let args;
@@ -85,12 +90,8 @@ function parseRareCharFormat(text, allowed) {
 }
 
 function removeRareCharBlocks(text) {
-  const m = markers;
-  const re = new RegExp(
-    `${escapeRegex(m.TC_START)}[\\s\\S]*?${escapeRegex(m.TC_END)}`,
-    'g'
-  );
-  return text.replace(re, '').trim();
+  _rareCharRemoveRe.lastIndex = 0;
+  return text.replace(_rareCharRemoveRe, '').trim();
 }
 
 // --- Legacy format parsers (fallback) ---
