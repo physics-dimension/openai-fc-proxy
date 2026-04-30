@@ -112,7 +112,7 @@ async function handleRequest(req, res) {
     upHeaders['content-length'] = Buffer.byteLength(bodyStr).toString();
 
     const baseUrl = upstreamUrl.replace(/\/+$/, '');
-    const requestUrl = baseUrl.includes('/chat/completions') ? baseUrl : `${baseUrl}/chat/completions`;
+    const requestUrl = baseUrl.includes('/chat/completions') ? baseUrl : `${baseUrl}/v1/chat/completions`;
 
     try {
       const resp = await fetchWithRetry(requestUrl, {
