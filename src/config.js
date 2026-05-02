@@ -24,6 +24,9 @@ const CLIENT_KEYS = process.env.CLIENT_KEYS
   ? new Set(process.env.CLIENT_KEYS.split(',').map(k => k.trim()).filter(Boolean))
   : null;
 
+// Upstream DS token (replaces client's Authorization when forwarding)
+const UPSTREAM_DS_TOKEN = process.env.UPSTREAM_DS_TOKEN || '';
+
 // Multi-upstream routing config file
 const ROUTES_FILE = process.env.ROUTES_FILE || '';
 
@@ -46,5 +49,6 @@ module.exports = {
   UPSTREAM_RETRY,
   UPSTREAM_RETRY_DELAY,
   CLIENT_KEYS,
+  UPSTREAM_DS_TOKEN,
   routes,
 };

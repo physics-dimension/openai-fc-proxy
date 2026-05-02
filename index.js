@@ -1,7 +1,7 @@
 'use strict';
 
 const http = require('http');
-const { PORT, BIND, UPSTREAM_URL, FC_RETRY_ENABLED, FC_RETRY_MAX, CLIENT_KEYS, routes } = require('./src/config');
+const { PORT, BIND, UPSTREAM_URL, FC_RETRY_ENABLED, FC_RETRY_MAX, CLIENT_KEYS, UPSTREAM_DS_TOKEN, routes } = require('./src/config');
 const { markers } = require('./src/delimiter');
 const { handleRequest } = require('./src/proxy');
 
@@ -23,6 +23,7 @@ server.listen(PORT, BIND, () => {
   console.log(`  TC_END:       ${markers.TC_END}`);
   console.log(`  FC Retry:     ${FC_RETRY_ENABLED ? `enabled (max ${FC_RETRY_MAX})` : 'disabled'}`);
   console.log(`  Auth:         ${CLIENT_KEYS ? `${CLIENT_KEYS.size} key(s)` : 'off'}`);
+  console.log(`  DS Token:     ${UPSTREAM_DS_TOKEN ? 'configured' : 'off (passthrough)'}`);
   console.log(`  Fallback:     ##TOOL_CALL##, <tool_call>, <function_call>, JSON, code blocks`);
   console.log('='.repeat(60));
   console.log('');

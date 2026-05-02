@@ -1,6 +1,6 @@
 'use strict';
 
-const { routes, UPSTREAM_URL } = require('./config');
+const { routes, UPSTREAM_URL, UPSTREAM_DS_TOKEN } = require('./config');
 
 // ============================================================
 // Multi-upstream routing + model aliases (inspired by Toolify)
@@ -77,9 +77,13 @@ function resolveUpstream(model, originalHeaders) {
 
   // No routing config: use single UPSTREAM_URL
   if (!modelMap) {
-    // Forward auth headers from original request
-    if (originalHeaders.authorization) headers['authorization'] = originalHeaders.authorization;
-    if (originalHeaders['x-api-key']) headers['x-api-key'] = originalHeaders['x-api-key'];
+    // Use UPSTREAM_DS_TOKEN if configured, otherwise forward client auth
+    if (UPSTREAM_DS_TOKEN) {
+      headers['authorization'] = `Bearer ${UPSTREAM_DS_TOKEN}`;
+    } else {
+      if (originalHeaders.authorization) headers['authorization'] = originalHeaders.authorization;
+      if (originalHeaders['x-api-key']) headers['x-api-key'] = originalHeaders['x-api-key'];
+    }
     if (originalHeaders['anthropic-version']) headers['anthropic-version'] = originalHeaders['anthropic-version'];
 
     return {
@@ -105,7 +109,11 @@ function resolveUpstream(model, originalHeaders) {
 
   if (!entry) {
     // No match at all, fallback to UPSTREAM_URL
-    if (originalHeaders.authorization) headers['authorization'] = originalHeaders.authorization;
+    if (UPSTREAM_DS_TOKEN) {
+      headers['authorization'] = `Bearer ${UPSTREAM_DS_TOKEN}`;
+    } else if (originalHeaders.authorization) {
+      headers['authorization'] = originalHeaders.authorization;
+    }
     return { upstreamUrl: UPSTREAM_URL, headers, actualModel: model };
   }
 
